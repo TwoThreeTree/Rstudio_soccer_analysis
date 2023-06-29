@@ -1,0 +1,259 @@
+---
+title: "The Matches Won Predicted by Shots and Cleansheet made"
+author: "Yuankai Zhao, 7784744"
+date: '2020-11-13'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(e1071)
+library(car)
+```
+
+## Question
+
+My response variable Y is "Matches Won" and my explanatory variables are
+$X_1$: "Shots made" and $X_2:$ "Cleansheets made". 
+Reasons why these explanatory variables? 
+1. "Shots made" means the total shots attempted by a team, this indicate the attacking power of a team, or the style of the soccer that a team tend to play,
+more shots tried by a team, the higher possibility the team score more goals, more goals means they are more likely to win more matches 
+2. "cleansheets Made" means how many matches each team's goalie or defenders have completely blocked all the attempted shots from opposed team indicate the defense power of the team, the more cleansheets a team made in a season, the less goal their 
+opponents scored against them, they are more likely to win more watches
+
+## Data Set
+
+```{r}
+team<-c("Manchester City","liverpool","Chelsee","Manchester United","Leichester City","Arsenal","Tottenham Hotspur","Brighton","Norwich City","Wolverhampton ","Everton","Southampton","West Hamunited","Shefield united","AFC Bournemouth","Crystal Palace","Watford","Aston Villa","Newcastle","Burnley")
+Matches_Won<-c(26,32,20,18,18,14,16,9,5,15,13,15,10,14,9,11,8,9,11,15)
+shots<-c(745,591,625,544,540,406,444,462,409,461,469,499,417,353,389,376,424,457,399,387)
+Cleansheet<-c(17,15,9,13,13,13,8,9,5,13,9,9,7,13,5,10,9,7,11,15)
+
+premier_league<-data.frame(team,Matches_Won,shots,Cleansheet)
+save(premier_league, file="premier_league.Rda")
+knitr::kable(premier_league,"pipe", col.name = c("Team","Matches Won", "Shots Made", "Cleansheets Made"), align = c("l","c","c"))
+
+```
+
+
+\textbf{Reference:} Premier League Club Stats, www.premierleague.com/stats/top/clubs/total_scoring_att?se=274. Date accessed
+November 1, 2020
+
+\textbf{Matches Won(Y):} The total matches won by one particular team in 2019-2020 premier league season, unit is games
+
+\textbf{Shots Made($X_1$):} The total shots that one particular team took throughout 2019-2020 premier league season, unit is shots
+
+\textbf{Cleansheets Made($X_2$):} The total cleansheets(a match where opposed team failed to score a single goal) that one particular team made throughout 2019-2020 premier league season, united cleansheets
+
+```{r}
+attach(premier_league)
+plot(shots,Matches_Won, main="Scatterplot X_1(Shots Made) to Y(Matches Won)",
+   xlab="Shots taken ", ylab="Matches Won ")
+
+plot(Cleansheet,Matches_Won, main="Scatterplot X_2(Cleansheets Made) to Y(Matches Won)",
+   xlab="Cleansheet Made ", ylab="Matches Won ")
+
+X1.lm = lm(Matches_Won~shots, data=premier_league)
+X2.lm = lm(Matches_Won~Cleansheet, data=premier_league)
+
+'R^2 for X1'
+summary(X1.lm)$r.squared
+
+'R^2 for X2'
+summary(X2.lm)$r.squared
+
+```
+
+
+## Preliminary Model
+```{r}
+X1.lm = lm(Matches_Won~shots, data=premier_league)
+summary(X1.lm)
+```
+\textbf{Regression line for Y $\sim$ $X_1$: }\[\hat{y}=-8.83281+0.04945X_1\]
+
+
+```{r}
+X2.lm = lm(Matches_Won~Cleansheet, data=premier_league)
+summary(X2.lm)
+```
+\textbf{Regression line for Y $\sim$ $X_2$: }\[\hat{y}=0.02903+1.36866X_2\]
+
+```{r}
+premier.lm = lm(Matches_Won~shots+Cleansheet, data=premier_league)
+summary(premier.lm)
+```
+\textbf{Regression line for Y $\sim$ $X_1$ + $X_2$: }\[\hat{y}=-11.93009+0.03545X_1+0.92128X_2\]
+
+\textbf{adjusted$R^2$ for Y $\sim$ $X_1$: 0.5511} 
+
+\textbf{adjusted$R^2$ for Y $\sim$ $X_2$: 0.504} 
+
+\textbf{adjusted$R^2$ for Y $\sim$ $X_1$ + $X_2$:  0.7417}
+
+**as we can see the adjusted $R^2$ for y $\sim$ $X_1$ + $X_2$ increased**
+
+```{r}
+premier.full<-lm(Matches_Won ~shots +Cleansheet+I(shots ^2)+I(Cleansheet^2)+shots *Cleansheet)
+premier.full
+```
+
+\textbf{Regression line for the full model: }\[\hat{y}=-33.853612+0.135957X_1+0.059046X_2-0.000077X_1^2+0.083719X_2^2-0.001714X_1X_2\]
+
+
+```{r}
+summary(premier.full)
+anova(premier.full)
+```
+
+\textbf{LEVEL OF SIGNIFICANCE}: $\alpha=0.05$
+
+**HYPOTHESES**: $H_0: \beta_1=\beta_2=\beta_3=\beta_4=\beta_5=0$ vs $H_A$: At least one $\beta_i\neq0$ for i = 1,...,5
+
+**DECISION RULE**: Reject $H_0$ if p-value$\leq\alpha$
+
+**TEST STATISTIC**: $F=10.47 $
+
+**P-VALUE**: p = 0.0002447
+
+**CONCLUSION**: As the p-value 0.0002447 $\leq\alpha$, reject $H_0$ and conclude there's sufficient evidence at least one $\beta_i\neq0$ and the model significantly explains the variation in the number of matches won.
+
+
+## Model Refinement
+```{r}
+summary(premier.full)
+```
+
+            As we can see there are no significant terms, 
+        And I am gonna run IVF test to check for multicollinearity.
+
+
+```{r}
+vif(premier.full)
+```
+
+        We can see here that there is an extreme amount of multicollinearity
+    and we should be reducing the model down. "I(shots^2)" will be removed from
+    the full model
+        
+```{r}
+premier.remade1<-lm(Matches_Won ~shots +Cleansheet+I(Cleansheet^2)+shots *Cleansheet)
+summary(premier.remade1)
+vif(premier.remade1)
+```
+        
+        We can see here that there is an extreme amount of multicollinearity
+    and we should be reducing the model down. "shots:Cleansheet" will be
+    removed from the full model
+
+
+
+
+```{r}
+premier.removed<-lm(Matches_Won ~shots +Cleansheet+I(Cleansheet^2))
+summary(premier.removed)
+vif(premier.removed)
+```
+
+        We can see here that shots is significant, however, we need a model
+    that fits into Y ~ $X_1$ + $X_2$. Therefore, we should be reducing the
+    model down. "I(Cleansheet^2)" will be removed from the full model
+
+
+```{r}
+premier.remade3<-lm(Matches_Won ~shots +Cleansheet)
+summary(premier.remade3)
+vif(premier.remade3)
+```
+            
+        We can see here that shots is significant
+        with a T-Value of 4.191 and P-Value of 0.000613 
+        
+        
+        We can see here that Cleansheet  is significant
+        with a T-Value of 3.779 and P-Value of 0.001497
+        
+        
+I would suggest including shots($X_1$) and cleansheet($X_2$)
+        
+```{r}
+premier.reduced<-lm(Matches_Won ~shots +Cleansheet)
+anova(premier.reduced, premier.full)
+```
+\textbf{LEVEL OF SIGNIFICANCE}: $\alpha=0.05$
+
+**HYPOTHESES**: $H_0: \beta_3=\beta_4=0$ vs $H_A$: At least one $\beta_i\neq0$ for i = 3,4
+
+**DECISION RULE**: Reject $H_0$ if p-value$\leq\alpha$
+
+**TEST STATISTIC**: $F=0.4425$
+
+**P-VALUE**: p = 0.7263
+
+**CONCLUSION**: As the p-value 0.7263 >$\alpha$, failed to reject $H_0$ and conclude there's insufficient evidence at least one of the co-efficient for $(shots)^2$ and $(cleansheets)^2$ is non-zero
+
+
+## Final Model and Assessment
+```{r}
+summary(premier.reduced)
+
+anova(premier.reduced)
+```
+
+
+
+\textbf{LEVEL OF SIGNIFICANCE}: $\alpha=0.05$
+
+**HYPOTHESES**: $H_0: \beta_1=\beta_2=0$ vs $H_A$: At least one $\beta_i\neq0$
+
+**DECISION RULE**: Reject $H_0$ if p-value$\leq\alpha$
+
+**TEST STATISTIC**: $F=28.28$
+
+**P-VALUE**: $\approx 0$
+
+**CONCLUSION**: As the p-value $\approx 0$ $\leq\alpha$, reject $H_0$ and conclude there's sufficient evidence at least one $\beta_i\neq0$ and the model significantly explains the variation in the number of matches won.
+
+
+```{r}
+premier.res =residuals(premier.reduced)
+premier.fitted =fitted.values(premier.reduced)
+#Residual Plot
+plot(premier.fitted, premier.res, ylab="residuals", xlab="fitted value")
+```
+
+Looking at the residual plot, in the earlier half we can see no pattern.
+Although there are two outliers in the extreme end, The total size is 20
+so it appears that our linearity assumption should be correct. 
+
+
+```{r}
+premier.stdres =rstandard(premier.reduced)
+#Normal Quantile Plot
+qqnorm(premier.stdres, ylab="Residual", xlab="normal scores", main=" premier league Mormal Quantile Plot")
+qqline(premier.stdres)
+```
+
+
+In the normal quantile plot, the tails deviate significantly from the
+line suggesting the errors are not normal and had quite a skewed distribution.
+
+## Conclusion
+
+based on the work I have done, the increase adj $R^2$ for Y~$X_1$+$X_2$. and the F-test on the reduced model which proved that they can contribute to the variation of Y(matches won) I can come to a conclusion that "shots made"
+and "cleansheets made" are strong explanatory variables to "matches won" as
+the response variables recall for part 1, there are two points.1. "Shots made" means the total shots attempted by a team, this indicate the attacking power of a team, or the style of the soccer that a team tend to play,
+more shots tried by a team, the higher possibility the team score more goals, more goals means they are more likely to win more matches 
+2. "cleansheets Made" means how many matches each team's goalie or defenders have completely blocked all the attempted shots from opposed team indicate the defense power of the team, the more cleansheets a team made in a season, the less goal their 
+opponents scored against them, they are more likely to win more watches
+
+
+```{r}
+premier.reduced
+```
+\textbf{final Regression line: }\[\hat{y}=-11.93009+0.03545X_1+0.92128X_2\]
+
+
